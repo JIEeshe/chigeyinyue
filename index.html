@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:;">
+    <title>驰哥音乐下载器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .titlebar {
+            height: 50px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 2px solid #ff6b35;
+            flex-shrink: 0;
+            -webkit-app-region: drag;
+            position: relative;
+        }
+
+        .menu-button {
+            position: absolute;
+            left: 10px;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            -webkit-app-region: no-drag;
+        }
+
+        .menu-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .titlebar h1 {
+            margin: 0;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        .window-controls {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            display: flex;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-controls button {
+            width: 50px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .window-controls button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .window-controls button.close:hover {
+            background-color: #e81123;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #2d2d2d 0%, #1a1a1a 100%);
+            border-right: 2px solid #ff6b35;
+            overflow-y: auto;
+            flex-shrink: 0;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 107, 53, 0.3);
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            color: white;
+            font-size: 16px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .website-list {
+            padding: 10px 0;
+        }
+
+        .website-item {
+            padding: 15px 20px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-left: 3px solid transparent;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+        }
+
+        .website-item:hover {
+            background-color: rgba(255, 107, 53, 0.1);
+            border-left-color: #ff6b35;
+        }
+
+        .website-item.active {
+            background-color: rgba(255, 107, 53, 0.2);
+            border-left-color: #ff6b35;
+        }
+
+        .website-item .name {
+            font-weight: 600;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            transition: margin-left 0.3s ease;
+        }
+
+        .content-wrapper.shifted {
+            margin-left: 250px;
+        }
+
+        .download-section {
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            height: 100%;
+            overflow-y: auto;
+            font-family: Arial, sans-serif;
+        }
+
+        .download-section h2 {
+            margin: 0 0 20px 0;
+            color: #ff6b35;
+            font-size: 24px;
+        }
+
+        .download-actions {
+            margin-bottom: 20px;
+        }
+
+        .download-actions button {
+            padding: 10px 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .download-actions button:hover {
+            background: #ff8555;
+        }
+
+        .download-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .download-item {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #ff6b35;
+        }
+
+        .download-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .download-item-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: white;
+        }
+
+        .download-item-status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .download-item-status.completed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .download-item-status.downloading {
+            background: #2196f3;
+            color: white;
+        }
+
+        .download-item-status.failed {
+            background: #f44336;
+            color: white;
+        }
+
+        .download-item-info {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+
+        .download-item-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .download-item-actions button {
+            padding: 6px 12px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+
+        .download-item-actions button:hover {
+            background: #555;
+        }
+
+        .download-item-actions button.delete {
+            background: #f44336;
+        }
+
+        .download-item-actions button.delete:hover {
+            background: #e53935;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+            font-size: 16px;
+        }
+
+        webview {
+            display: inline-flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            z-index: 10;
+        }
+
+        /* 下载进度浮窗 */
+        .download-popup {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 350px;
+            max-height: 400px;
+            background: #2d2d2d;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow: hidden;
+            display: none;
+        }
+
+        .download-popup.show {
+            display: block;
+        }
+
+        .download-popup-header {
+            padding: 15px;
+            background: #1a1a1a;
+            border-bottom: 2px solid #ff6b35;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .download-popup-header h3 {
+            margin: 0;
+            color: white;
+            font-size: 16px;
+        }
+
+        .download-popup-close {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .download-popup-close:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .download-popup-list {
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .download-popup-item {
+            background: #1a1a1a;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #ff6b35;
+        }
+
+        .download-popup-item-name {
+            color: white;
+            font-size: 13px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .download-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .download-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b35, #ff8555);
+            transition: width 0.3s;
+        }
+
+        .download-popup-item-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #999;
+        }
+
+        /* 下载链接输入模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1001;
+            display: none;
+        }
+
+        .modal {
+            width: 420px;
+            max-width: 90%;
+            background: #2d2d2d;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 16px;
+            border: 2px solid #ff6b35;
+        }
+
+        .modal-header {
+            color: #ff6b35;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .modal-body input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #1a1a1a;
+            color: white;
+            outline: none;
+        }
+
+        .modal-body input:focus {
+            border-color: #ff6b35;
+        }
+
+        .modal-actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+            background: #ff6b35;
+            color: white;
+        }
+
+        .modal-actions button.secondary {
+            background: #444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="titlebar">
+        <button class="menu-button" id="menuToggle" title="切换菜单">☰</button>
+        <h1>驰哥音乐下载器</h1>
+        <div class="window-controls">
+            <button id="minimize" title="最小化">─</button>
+            <button id="maximize" title="最大化">□</button>
+            <button id="close" class="close" title="关闭">×</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🎵 网站导航</h2>
+            </div>
+            <div class="website-list" id="websiteList">
+                <!-- 网站列表将通过JS动态生成 -->
+            </div>
+            <div class="website-item" id="downloadsMenuItem" style="margin-top: 20px; border-top: 1px solid rgba(255, 107, 53, 0.3); padding-top: 20px;">
+                <div class="name">📥 已下载</div>
+            </div>
+        </div>
+        <div class="content-wrapper">
+            <div class="loading" id="loading">加载中...</div>
+            <webview id="webview" src="https://y.wjhe.top/"
+                     useragent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                     webpreferences="contextIsolation=no">
+            </webview>
+            <div class="download-section" id="downloadSection" style="display: none;">
+                <h2>📥 下载管理</h2>
+                <div class="download-actions">
+                    <button id="openFolderBtn">打开下载文件夹</button>
+                    <button id="testDownloadBtn" style="margin-left: 10px;">测试下载</button>
+                    <button id="clearDownloadsBtn" style="margin-left: 10px; background: #f44336;">清空下载记录</button>
+                </div>
+                <div class="download-list" id="downloadList">
+                    <!-- 下载列表将通过JS动态生成 -->
+                </div>
+            </div>
+        </div>
+    <!-- 下载进度浮窗 -->
+    <div class="download-popup" id="downloadPopup">
+        <div class="download-popup-header">
+            <h3>⬇️ 下载中</h3>
+            <button class="download-popup-close" id="closeDownloadPopup">×</button>
+        </div>
+        <div class="download-popup-list" id="downloadPopupList">
+            <!-- 动态生成下载项 -->
+        </div>
+    </div>
+
+    <!-- 输入下载URL模态框 -->
+    <div class="modal-overlay" id="downloadUrlModal" style="display: none;">
+        <div class="modal">
+            <div class="modal-header">输入下载链接</div>
+            <div class="modal-body">
+                <input id="downloadUrlInput" type="text" placeholder="请输入音乐文件URL（支持 mp3、flac 等）">
+            </div>
+            <div class="modal-actions">
+                <button id="confirmDownloadUrl">开始下载</button>
+                <button class="secondary" id="cancelDownloadUrl">取消</button>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <script>
+        const webview = document.getElementById('webview');
+        const loading = document.getElementById('loading');
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menuToggle');
+        const websiteList = document.getElementById('websiteList');
+
+        // 网站列表配置
+        const websites = [
+            {
+                name: 'HE Music',
+                url: 'https://y.wjhe.top/',
+                icon: '🎵'
+            },
+            {
+                name: '歌曲宝',
+                url: 'https://www.gequbao.com/',
+                icon: '🎼'
+            },
+            {
+                name: '无损音乐吧',
+                url: 'https://www.wsyyb.com/',
+                icon: '💿'
+            },
+            {
+                name: '音乐磁场',
+                url: 'https://www.hifini.com/',
+                icon: '🎧'
+            },
+            {
+                name: '5sing原创音乐',
+                url: 'https://5sing.kugou.com/',
+                icon: '🎤'
+            },
+            {
+                name: '果核音乐',
+                url: 'https://music.ghxi.com/',
+                icon: '🍎'
+            }
+        ];
+
+        let currentWebsite = 0;
+        let isDownloadView = false;
+        const { ipcRenderer } = require('electron');
+
+        // 下载请求去重（短时间内相同 URL 只触发一次）
+        const recentDownloadRequests = new Map();
+
+        // 生成网站列表
+        function renderWebsiteList() {
+            websiteList.innerHTML = '';
+            websites.forEach((site, index) => {
+                const item = document.createElement('div');
+                item.className = 'website-item' + (index === currentWebsite ? ' active' : '');
+                item.innerHTML = `
+                    <div class="name">${site.icon} ${site.name}</div>
+                `;
+                item.addEventListener('click', () => switchWebsite(index));
+                websiteList.appendChild(item);
+            });
+        }
+
+        // 切换网站
+        function switchWebsite(index) {
+            if (isDownloadView) {
+                showWebview();
+            }
+            currentWebsite = index;
+            loading.style.display = 'block';
+            loading.textContent = '加载中...';
+            loading.style.color = 'white';
+            webview.src = websites[index].url;
+            renderWebsiteList();
+        }
+
+        // 显示下载页面
+        async function showDownloads() {
+            isDownloadView = true;
+            webview.style.display = 'none';
+            document.getElementById('downloadSection').style.display = 'block';
+            loading.style.display = 'none';
+            
+            // 加载下载历史
+            const history = await ipcRenderer.invoke('get-download-history');
+            renderDownloadList(history);
+            
+            // 更新侧边栏选中状态
+            document.querySelectorAll('.website-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.getElementById('downloadsMenuItem').classList.add('active');
+        }
+
+        // 渲染下载列表
+        function renderDownloadList(downloads) {
+            const downloadList = document.getElementById('downloadList');
+            
+            if (downloads.length === 0) {
+                downloadList.innerHTML = '<div class="empty-message">暂无下载记录</div>';
+                return;
+            }
+            
+            downloadList.innerHTML = downloads.map(item => {
+                const date = new Date(item.startTime).toLocaleString('zh-CN');
+                const size = item.size ? (item.size / 1024 / 1024).toFixed(2) + ' MB' : '未知';
+                const statusText = {
+                    'completed': '已完成',
+                    'downloading': '下载中',
+                    'failed': '失败',
+                    'interrupted': '已中断'
+                }[item.status] || item.status;
+                
+                return `
+                    <div class="download-item">
+                        <div class="download-item-header">
+                            <div class="download-item-name">${item.fileName}</div>
+                            <div class="download-item-status ${item.status}">${statusText}</div>
+                        </div>
+                        <div class="download-item-info">
+                            下载时间: ${date} | 文件大小: ${size}
+                        </div>
+                        <div class="download-item-actions">
+                            ${item.status === 'completed' ? `
+                                <button onclick="openFile('${item.filePath.replace(/\\/g, '\\\\')}')">打开文件</button>
+                            ` : ''}
+                            <button class="delete" onclick="deleteDownload('${item.id}')">删除记录</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 打开文件
+        async function openFile(filePath) {
+            await ipcRenderer.invoke('open-file', filePath);
+        }
+
+        // 删除下载记录
+        async function deleteDownload(id) {
+            if (confirm('确定要删除这条下载记录吗?')) {
+                const newHistory = await ipcRenderer.invoke('delete-download', id);
+                renderDownloadList(newHistory);
+            }
+        }
+
+        // 返回网站浏览模式
+        function showWebview() {
+            isDownloadView = false;
+            webview.style.display = 'inline-flex';
+            document.getElementById('downloadSection').style.display = 'none';
+            document.getElementById('downloadsMenuItem').classList.remove('active');
+            renderWebsiteList();
+        }
+
+        // 切换侧边栏
+        const contentWrapper = document.querySelector('.content-wrapper');
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            contentWrapper.classList.toggle('shifted');
+        });
+
+        // 点击内容区域关闭侧边栏
+        contentWrapper.addEventListener('click', (e) => {
+            // 如果点击的是下载区域,不关闭侧边栏
+            if (e.target.closest('#downloadSection')) {
+                return;
+            }
+            if (sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                contentWrapper.classList.remove('shifted');
+            }
+        });
+
+        // 已下载菜单项点击事件
+        document.getElementById('downloadsMenuItem').addEventListener('click', () => {
+            showDownloads();
+            sidebar.classList.remove('active');
+            contentWrapper.classList.remove('shifted');
+        });
+
+        // 打开下载文件夹按钮
+        document.getElementById('openFolderBtn').addEventListener('click', async () => {
+            await ipcRenderer.invoke('open-download-folder');
+        });
+
+        // 测试下载按钮（使用自定义模态框替代 prompt）
+        document.getElementById('testDownloadBtn').addEventListener('click', () => {
+            showDownloadUrlModal();
+        });
+        
+        // 清空下载记录按钮
+        document.getElementById('clearDownloadsBtn').addEventListener('click', async () => {
+            if (confirm('确定要清空所有下载记录吗？此操作不可恢复。')) {
+                const empty = await ipcRenderer.invoke('clear-downloads');
+                renderDownloadList(empty);
+            }
+        });
+
+        // 显示下载URL输入模态框
+        function showDownloadUrlModal() {
+            const modal = document.getElementById('downloadUrlModal');
+            const input = document.getElementById('downloadUrlInput');
+            modal.style.display = 'block';
+            input.value = '';
+            input.focus();
+        }
+
+        // 隐藏下载URL输入模态框
+        function hideDownloadUrlModal() {
+            const modal = document.getElementById('downloadUrlModal');
+            modal.style.display = 'none';
+        }
+
+        // 校验音频链接
+        function isValidAudioUrl(url) {
+            try {
+                const u = new URL(url);
+                return (/\.(mp3|flac|wav|m4a|aac|ogg|wma|ape|ncm)$/i.test(u.pathname) || /download|music|audio/i.test(url));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 绑定模态框按钮事件
+        document.getElementById('confirmDownloadUrl').addEventListener('click', async () => {
+            const url = document.getElementById('downloadUrlInput').value.trim();
+            if (!url || !isValidAudioUrl(url)) {
+                alert('请输入有效的音乐下载链接（支持 mp3、flac 等格式）');
+                return;
+            }
+            hideDownloadUrlModal();
+            console.log('手动下载:', url);
+            await handleDownload(url);
+        });
+
+        document.getElementById('cancelDownloadUrl').addEventListener('click', () => {
+            hideDownloadUrlModal();
+        });
+
+        // 输入框键盘事件：Enter 确认，Esc 取消
+        document.getElementById('downloadUrlInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('confirmDownloadUrl').click();
+            } else if (e.key === 'Escape') {
+                hideDownloadUrlModal();
+            }
+        });
+
+        // 监听来自主进程的下载链接消息
+        ipcRenderer.on('download-link', (event, url) => {
+            console.log('收到来自主进程的下载请求:', url);
+            handleDownload(url);
+        });
+
+        // 下载进度浮窗管理
+        const downloadPopup = document.getElementById('downloadPopup');
+        const downloadPopupList = document.getElementById('downloadPopupList');
+        const closeDownloadPopup = document.getElementById('closeDownloadPopup');
+        const activeDownloads = new Map();
+
+        // 关闭下载浮窗
+        closeDownloadPopup.addEventListener('click', () => {
+            downloadPopup.classList.remove('show');
+        });
+
+        // 显示下载浮窗
+        function showDownloadPopup() {
+            downloadPopup.classList.add('show');
+        }
+
+        // 更新下载浮窗列表
+        function updateDownloadPopup() {
+            if (activeDownloads.size === 0) {
+                downloadPopup.classList.remove('show');
+                return;
+            }
+
+            downloadPopupList.innerHTML = Array.from(activeDownloads.values()).map(item => {
+                const progress = item.progress || 0;
+                const speed = item.speed || '0 KB/s';
+                const status = item.status === 'completed' ? '✓ 已完成' : '下载中...';
+                
+                return `
+                    <div class="download-popup-item">
+                        <div class="download-popup-item-name">${item.fileName}</div>
+                        <div class="download-progress-bar">
+                            <div class="download-progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="download-popup-item-info">
+                            <span>${status}</span>
+                            <span>${progress.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 监听下载开始
+        ipcRenderer.on('download-started', (event, item) => {
+            console.log('下载开始:', item.fileName);
+            activeDownloads.set(item.id, {
+                ...item,
+                progress: 0,
+                speed: '0 KB/s'
+            });
+            showDownloadPopup();
+            updateDownloadPopup();
+        });
+
+        // 监听下载进度
+        ipcRenderer.on('download-progress', (event, data) => {
+            const item = activeDownloads.get(data.id);
+            if (item) {
+                item.progress = parseFloat(data.progress) || 0;
+                item.status = data.status;
+                updateDownloadPopup();
+            }
+        });
+
+        // 监听下载完成
+        ipcRenderer.on('download-completed', (event, item) => {
+            console.log('下载完成:', item.fileName);
+            const downloadItem = activeDownloads.get(item.id);
+            if (downloadItem) {
+                downloadItem.status = 'completed';
+                downloadItem.progress = 100;
+                updateDownloadPopup();
+                
+                // 3秒后移除已完成的下载
+                setTimeout(() => {
+                    activeDownloads.delete(item.id);
+                    updateDownloadPopup();
+                }, 3000);
+            }
+            
+            // 如果当前在下载页面,刷新列表
+            if (isDownloadView) {
+                showDownloads();
+            }
+        });
+
+        // 监听下载失败
+        ipcRenderer.on('download-failed', (event, item) => {
+            console.log('下载失败:', item.fileName);
+            activeDownloads.delete(item.id);
+            updateDownloadPopup();
+        });
+
+        // 处理下载（支持可选的名称猜测）
+        async function handleDownload(url, nameGuess = '') {
+            console.log('开始处理下载:', url, '名称猜测:', nameGuess);
+            try {
+                await ipcRenderer.invoke('download-file', url, nameGuess);
+            } catch (error) {
+                console.error('下载失败:', error);
+                alert('下载失败: ' + error.message);
+            }
+        }
+
+        // 在webview加载完成后注入增强的下载拦截代码
+        webview.addEventListener('did-finish-load', () => {
+            loading.style.display = 'none';
+            
+            // 注入代码拦截下载链接
+            const injectCode = `
+                (function() {
+                    console.log('下载拦截脚本已加载');
+                    
+                    // 仅识别音频直链
+                    const audioRegex = /\\.(mp3|flac|wav|m4a|aac|ogg|wma|ape|ncm)(\\?.*)?$/i;
+                    
+                    // 统一触发主进程下载的方法
+                    function requestDownload(url, nameGuess = '') {
+                        try {
+                            if (nameGuess) {
+                                nameGuess = String(nameGuess).replace(/[\\/:*?"<>|]/g, '_').trim();
+                            }
+                            const oldTitle = document.title;
+                            document.title = 'DOWNLOAD_REQUEST:' + encodeURIComponent(url) + '::' + encodeURIComponent(nameGuess || '');
+                            setTimeout(() => {
+                                document.title = oldTitle;
+                            }, 100);
+                        } catch (e) {
+                            console.warn('触发下载失败:', e);
+                        }
+                    }
+                    
+                    // 监听所有点击事件（A 标签）
+                    document.addEventListener('click', function(e) {
+                        // 查找最近的a标签
+                        let target = e.target;
+                        while (target && target.tagName !== 'A') {
+                            target = target.parentElement;
+                            if (!target || target === document.body) break;
+                        }
+                        
+                        if (target && target.tagName === 'A' && target.href) {
+                            const url = target.href;
+                            console.log('点击链接:', url);
+                            
+                            // 检测音频文件或下载链接
+                            const isAudioFile = /\\.(mp3|flac|wav|m4a|aac|ogg|wma|ape|ncm)/i.test(url);
+                            const hasDownload = target.hasAttribute('download');
+                            const isDownloadUrl = /download|music|audio/i.test(url);
+                            
+                            if (isAudioFile || hasDownload || isDownloadUrl) {
+                                console.log('检测到下载链接，准备拦截');
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.stopImmediatePropagation();
+                                
+                                // 名称猜测
+                                const nameGuessAttr = target.getAttribute('download') || target.getAttribute('title') || '';
+                                const linkText = (target.textContent || '').trim();
+                                let nameGuess = nameGuessAttr || linkText;
+                                try {
+                                    const u = new URL(url);
+                                    const fnParam = u.searchParams.get('filename') || u.searchParams.get('name') || '';
+                                    if (!nameGuess && fnParam) nameGuess = fnParam;
+                                } catch (e) {}
+                                
+                                requestDownload(url, nameGuess || '');
+                                return false;
+                            }
+                        }
+                    }, true);
+                    
+                    // 钩住 XMLHttpRequest，拦截音频直链（站点用 XHR/fetch 发起下载时）
+                    try {
+                        const origOpen = XMLHttpRequest.prototype.open;
+                        const origSend = XMLHttpRequest.prototype.send;
+                        XMLHttpRequest.prototype.open = function(method, url) {
+                            try { this.__he_url = url; } catch (_) {}
+                            return origOpen.apply(this, arguments);
+                        };
+                        XMLHttpRequest.prototype.send = function(body) {
+                            try {
+                                const url = this.__he_url || '';
+                                if (audioRegex.test(url)) {
+                                    console.log('XHR 拦截音频直链:', url);
+                                    requestDownload(url, '');
+                                    try { this.abort(); } catch (_) {}
+                                    return; // 阻止实际请求，避免 CORS 报错
+                                }
+                            } catch (_) {}
+                            return origSend.apply(this, arguments);
+                        };
+                    } catch (e) {
+                        console.warn('XMLHttpRequest 拦截失败:', e);
+                    }
+                    
+                    // 钩住 fetch，拦截音频直链
+                    try {
+                        const origFetch = window.fetch;
+                        window.fetch = function(input, init) {
+                            try {
+                                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                                if (audioRegex.test(url)) {
+                                    console.log('fetch 拦截音频直链:', url);
+                                    requestDownload(url, '');
+                                    return Promise.reject(new Error('intercepted audio fetch for download'));
+                                }
+                            } catch (_) {}
+                            return origFetch.apply(this, arguments);
+                        };
+                    } catch (e) {
+                        console.warn('fetch 拦截失败:', e);
+                    }
+                    
+                    console.log('下载拦截已激活');
+                })();
+            `;
+            
+            webview.executeJavaScript(injectCode).then(() => {
+                console.log('注入脚本成功');
+            }).catch(err => {
+                console.error('注入下载拦截代码失败:', err);
+            });
+        });
+
+        // 监听console消息来获取下载请求
+        webview.addEventListener('console-message', (e) => {
+            console.log('Webview:', e.message);
+            
+            if (e.message.includes('检测到下载链接')) {
+                console.log('准备拦截下载');
+            }
+        });
+
+        // 监听页面标题变化来接收下载请求（带去重）
+        webview.addEventListener('page-title-updated', (e) => {
+            const title = e.title;
+            if (title && title.startsWith('DOWNLOAD_REQUEST:')) {
+                const payload = title.replace('DOWNLOAD_REQUEST:', '');
+                let url = payload;
+                let nameGuess = '';
+                if (payload.includes('::')) {
+                    const parts = payload.split('::');
+                    const u = parts[0] || '';
+                    const n = parts[1] || '';
+                    try { url = decodeURIComponent(u); } catch (_) { url = u; }
+                    try { nameGuess = decodeURIComponent(n); } catch (_) { nameGuess = n; }
+                } else {
+                    try { url = decodeURIComponent(payload); } catch (_) { url = payload; }
+                }
+                // 渲染端短时去重：3 秒内相同 URL 只触发一次，避免点击与 XHR/fetch 双重触发
+                try {
+                    const key = String(url || '').toLowerCase();
+                    const now = Date.now();
+                    const last = recentDownloadRequests.get(key) || 0;
+                    if (now - last < 3000) {
+                        console.log('忽略重复 DOWNLOAD_REQUEST（3s 内）：', url);
+                        return;
+                    }
+                    recentDownloadRequests.set(key, now);
+                    // 延迟清理，避免 Map 膨胀
+                    setTimeout(() => {
+                        const t = recentDownloadRequests.get(key) || 0;
+                        if (Date.now() - t >= 3000) {
+                            recentDownloadRequests.delete(key);
+                        }
+                    }, 5000);
+                } catch (_) {}
+                console.log('接收到下载请求:', url, '名称猜测:', nameGuess);
+                handleDownload(url, nameGuess);
+            }
+        });
+        // 初始化网站列表
+        renderWebsiteList();
+
+        // 处理加载失败
+        webview.addEventListener('did-fail-load', (event) => {
+            if (event.errorCode !== -3) { // -3 是取消加载，可以忽略
+                loading.textContent = '加载失败，请检查网络连接';
+                loading.style.color = '#ff6b6b';
+            }
+        });
+
+        // 新窗口在外部浏览器打开
+        webview.addEventListener('new-window', (e) => {
+            require('electron').shell.openExternal(e.url);
+        });
+
+        // 窗口控制按钮
+        document.getElementById('minimize').addEventListener('click', () => {
+            ipcRenderer.send('window-minimize');
+        });
+
+        document.getElementById('maximize').addEventListener('click', () => {
+            ipcRenderer.send('window-maximize');
+        });
+
+        document.getElementById('close').addEventListener('click', () => {
+            ipcRenderer.send('window-close');
+        });
+    </script>
+</body>
+</html>
